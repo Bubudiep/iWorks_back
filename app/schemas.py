@@ -9,7 +9,10 @@ class ProfileSchema(Schema):
     id = fields.Int()
     user_id = fields.Int()
     zalo_id = fields.Str()
-
+    class Meta:
+        fields = ("id","user_id","zalo_id","zalo_name",
+                  "zalo_phone","full_name","address","huyen","tinh",
+                  "long_pos","lat_pos","created_at","updated_at")
 class TimeLogSchema(Schema):
     id = fields.Int()
     user_id = fields.Int()
