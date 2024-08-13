@@ -10,30 +10,44 @@ from .models import *
 from .schemas import *
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
-import datetime
+from datetime import datetime, date
 from flask import request, jsonify
+from sqlalchemy import extract
+
 
 api = Blueprint('api', __name__)
 
 class StandardPagesPagination:
-    def __init__(self, page, per_page):
+    def __init__(self, query, page, per_page):
         self.page = page
         self.per_page = per_page
+        self.total = query.count()
+        self.pages = self.total // self.per_page + (
+            1 if self.total % self.per_page > 0 else 0
+        )
+        self.items = (
+            query.offset((self.page - 1) * self.per_page).limit(self.per_page).all()
+        )
+        self.base_url = request.base_url
 
-    def paginate_query(self, query):
-        total_items = len(query)
-        start = (self.page - 1) * self.per_page
-        end = start + self.per_page
-        items = query[start:end]
+    def get_page_link(self, page):
+        if page < 1 or page > self.pages:
+            return None
+        return f"{self.base_url}?page={page}&page_size={self.per_page}"
 
-        total_pages = (total_items + self.per_page - 1) // self.per_page
-
+    def to_dict(self, schema):
+        items = schema.dump(self.items)
         return {
-            'total_items': total_items,
-            'total_pages': total_pages,
-            'current_page': self.page,
-            'per_page': self.per_page,
-            'items': items
+            "page": self.page,
+            "page_size": self.per_page,
+            "count": self.total,
+            "items": items,
+            "next_page": (
+                self.get_page_link(self.page + 1) if self.page < self.pages else None
+            ),
+            "previous_page": (
+                self.get_page_link(self.page - 1) if self.page > 1 else None
+            ),
         }
         
 def init_app(app):
@@ -103,7 +117,6 @@ def init_app(app):
         # Kiểm tra mật khẩu
         if not check_password_hash(user.password, password):
             return jsonify({"error": "Incorrect password"}), 400
-
         # Tạo thời gian hết hạn cho token là 1 tuần kể từ thời điểm hiện tại
         expiration_time = datetime.datetime.utcnow() + datetime.timedelta(weeks=1)
 
@@ -114,9 +127,330 @@ def init_app(app):
         }, Config.JWT_SECRET_KEY, algorithm='HS256')
 
         return jsonify({'token': token,'exp': expiration_time}), 200
-
-    @app.route('/profile', methods=['GET'])
+    
+    @app.route('/worksalary', methods=['GET','POST'])
     @token_required
+    def worksalary(user_id):
+        if request.method == "GET":
+            return get_worksalary(user_id)
+        elif request.method == "POST":
+            return create_worksalary(user_id)
+    def get_worksalary(user_id):
+        try:
+            qs_WorkSalary = WorkSalary.query.join(WorkSheet).filter(
+                WorkSheet.user_id == user_id
+            )
+            
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 10, type=int)
+            pagination = StandardPagesPagination(qs_WorkSalary, page, per_page)
+            project_schema = WorkSalarySchema(many=True)
+            paginated_data = pagination.to_dict(project_schema)
+            return jsonify(paginated_data), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    def create_worksalary(user_id):
+        data = request.get_json()
+        worksheet=data.get('Worksheet',None)
+        if worksheet is None:
+            return jsonify({'error': 'Worksheet is required'}), 400
+        else:
+            # Đảm bảo worksheet là của user_id
+            qs_worksheet=WorkSheet.query.filter_by(id=worksheet,user_id=user_id).count()
+            if qs_worksheet==0:
+                return jsonify({'error': 'Không tìm thấy dữ liệu!'}), 400
+        SalaryName=data.get('SalaryName',None)
+        if SalaryName is None or SalaryName=="":
+            return jsonify({'error': 'Vui lòng nhập tên!'}), 400
+        Salary=data.get('Salary',None)
+        if Salary is None:
+            return jsonify({'error': 'Tiền lương không được để trống!'}), 400
+        qs_salary=WorkSalary.query.filter_by(worksheet_id=worksheet,SalaryName=SalaryName)
+        if qs_salary.count()>0:
+            return jsonify({'error': f"{SalaryName} đã tồn tại!"}), 400
+        
+        new_worksheet = WorkSalary(
+            worksheet_id=worksheet,
+            SalaryName=SalaryName,
+            Salary=Salary
+        )
+        db.session.add(new_worksheet)
+        db.session.commit()
+        return jsonify(WorkSalarySchema().dump(new_worksheet)), 201
+    
+    @app.route('/worksalary/<int:id>', methods=['GET','PATCH','DELETE'])
+    @token_required
+    def worksalary_fk(user_id,id):
+        if request.method == "GET":
+            return get_worksalary_fk(user_id,id)
+        elif request.method == "PATCH":
+            return update_worksalary_fk(user_id,id)
+        elif request.method == "DELETE":
+            return delete_worksalary_fk(user_id, id)
+    def get_worksalary_fk(user_id,id):
+        worksalary = WorkSalary.query.join(WorkSheet).filter(
+            WorkSheet.user_id == user_id,
+            WorkSalary.id == id
+        ).first()
+        if not worksalary:
+            return jsonify({'message': 'WorkSalary not found'}), 404
+        return jsonify(WorkSheetSchema().dump(worksheet))
+    def update_worksalary_fk(user_id,id):
+        worksalary = WorkSalary.query.join(WorkSheet).filter(
+            WorkSheet.user_id == user_id,
+            WorkSalary.id == id
+        ).first()
+        if not worksalary:
+            return jsonify({'message': 'WorkSalary not found'}), 404
+
+        data = request.get_json()
+
+        worksalary.SalaryName = data.get('SalaryName', worksalary.SalaryName)
+        worksalary.Salary = data.get('Salary', worksalary.Salary)
+
+        db.session.commit()
+        return jsonify(WorkSalarySchema().dump(worksalary)), 200
+    def delete_worksalary_fk(user_id, id):
+        worksalary = WorkSalary.query.join(WorkSheet).filter(
+            WorkSheet.user_id == user_id,
+            WorkSalary.id == id
+        ).first()
+        if not worksalary:
+            return jsonify({'message': 'WorkSalary not found'}), 404
+        db.session.delete(worksalary)
+        db.session.commit()
+        return jsonify({'message': 'WorkSalary deleted successfully'}), 200
+    
+    @app.route('/worksheet_details/<int:id>', methods=['GET'])
+    @token_required
+    def worksheet_details(user_id, id=None):
+        if request.method == "GET":
+            if id is None:
+                return jsonify({'error': 'Invalid request method or missing id'}), 400
+            else:
+                return get_worksheet_details_fk(user_id, id)
+    def get_worksheet_details_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+        return jsonify(WorkSheetDetailsSchema().dump(worksheet))
+    
+    @app.route('/worksheet_record/<int:id>', methods=['GET'])
+    @token_required
+    def worksheet_record(user_id, id=None):
+        if request.method == "GET":
+            if id is None:
+                return jsonify({'error': 'Invalid request method or missing id'}), 400
+            else:
+                return get_worksheet_record_fk(user_id, id)
+    def get_worksheet_record_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+        return jsonify(WorkSheetRecordSchema().dump(worksheet))
+    
+    @app.route('/worksheet_salary/<int:id>', methods=['GET'])
+    @token_required
+    def worksheet_salary(user_id, id=None):
+        if request.method == "GET":
+            if id is None:
+                return jsonify({'error': 'Invalid request method or missing id'}), 400
+            else:
+                return get_worksheet_salary_fk(user_id, id)
+    def get_worksheet_salary_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+        return jsonify(WorkSheetSalarySchema().dump(worksheet))
+    
+    @app.route('/worksheet', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+    @app.route('/worksheet/<int:id>', methods=['GET', 'PATCH', 'DELETE'])
+    @token_required
+    def worksheet(user_id, id=None):
+        if request.method == "GET":
+            if id is None:
+                return get_worksheet(user_id)
+            else:
+                return get_worksheet_fk(user_id, id)
+        elif request.method == "POST" and id is None:
+            return create_worksheet(user_id)
+        elif request.method == "PATCH" and id is not None:
+            return update_worksheet_fk(user_id, id)
+        elif request.method == "DELETE" and id is not None:
+            return delete_worksheet_fk(user_id, id)
+        else:
+            return jsonify({'error': 'Invalid request method or missing id'}), 400
+
+    def get_worksheet(user_id):
+        try:
+            qs_worksheet = WorkSheet.query.filter_by(user_id=user_id)
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 10, type=int)
+            pagination = StandardPagesPagination(qs_worksheet, page, per_page)
+            project_schema = WorkSheetSchema(many=True)
+            paginated_data = pagination.to_dict(project_schema)
+            return jsonify(paginated_data), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    def create_worksheet(user_id):
+        data = request.get_json()
+        company = data.get('Company', None)
+        if company is None or company == "":
+            return jsonify({'error': 'Bao gồm tên công ty'}), 400
+        qs_company = WorkSheet.query.filter_by(user_id=user_id, Company=company)
+        if qs_company.count() > 0:
+            return jsonify({'error': 'Công ty này đã có'}), 400
+        new_worksheet = WorkSheet(
+            user_id=user_id,
+            Company=company,
+            isActive=True
+        )
+        db.session.add(new_worksheet)
+        db.session.commit()
+        return jsonify(WorkSheetSchema().dump(new_worksheet)), 201
+
+    def get_worksheet_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+        return jsonify(WorkSheetSchema().dump(worksheet))
+
+    def update_worksheet_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+
+        data = request.get_json()
+
+        worksheet.Company = data.get('Company', worksheet.Company)
+        worksheet.isActive = data.get('isActive', worksheet.isActive)
+
+        db.session.commit()
+        return jsonify(WorkSheetSchema().dump(worksheet)), 200
+
+    def delete_worksheet_fk(user_id, id):
+        worksheet = WorkSheet.query.filter_by(id=id, user_id=user_id).first()
+        if not worksheet:
+            return jsonify({'message': 'WorkSheet not found'}), 404
+        db.session.delete(worksheet)
+        db.session.commit()
+        return jsonify({'message': 'WorkSheet deleted successfully'}), 200
+
+
+    @app.route('/workrecord', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+    @app.route('/workrecord/<int:id>', methods=['GET', 'PATCH', 'DELETE'])
+    @token_required
+    def workrecord(user_id, id=None):
+        if request.method == "GET":
+            if id is None:
+                return get_workrecord(user_id)
+            else:
+                return get_workrecord_fk(user_id, id)
+        elif request.method == "POST" and id is None:
+            return create_workrecord(user_id)
+        elif request.method == "PATCH" and id is not None:
+            return update_workrecord_fk(user_id, id)
+        elif request.method == "DELETE" and id is not None:
+            return delete_workrecord_fk(user_id, id)
+        else:
+            return jsonify({'error': 'Invalid request method or missing id'}), 400
+
+    def get_workrecord(user_id):
+        try:
+            qs_workrecord = WorkRecord.query.join(WorkSheet).filter(WorkSheet.user_id == user_id)
+            worksheet = request.args.get('worksheet',None)
+            if worksheet is not None:
+                qs_workrecord = qs_workrecord.filter(WorkRecord.worksheet_id==worksheet)
+
+            month = request.args.get('month', None, type=int)
+            year = request.args.get('year', None, type=int)
+            if month is not None and year is not None:
+                qs_workrecord = qs_workrecord.filter(
+                    extract('month', WorkRecord.workDate) == month,
+                    extract('year', WorkRecord.workDate) == year
+                )
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 10, type=int)
+            pagination = StandardPagesPagination(qs_workrecord, page, per_page)
+            workrecord_schema = WorkRecordSchema(many=True)
+            paginated_data = pagination.to_dict(workrecord_schema)
+            return jsonify(paginated_data), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    def create_workrecord(user_id):
+        data = request.get_json()
+        worksheet_id = data.get('worksheet_id', None)
+        workDate_str = data.get('workDate', None)
+        startTime_str = data.get('startTime', None)
+        endTime_str = data.get('endTime', None)
+        overTime = data.get('overTime', None)
+        lateTime = data.get('lateTime', None)
+        # Convert string to date or datetime objects
+        workDate = datetime.strptime(workDate_str, '%Y-%m-%d').date() if workDate_str else None
+        startTime = datetime.strptime(startTime_str, '%Y-%m-%d %H:%M:%S') if startTime_str else None
+        endTime = datetime.strptime(endTime_str, '%Y-%m-%d %H:%M:%S') if endTime_str else None
+
+        if not worksheet_id or not WorkSheet.query.filter_by(id=worksheet_id, user_id=user_id).first():
+            return jsonify({'error': 'Invalid worksheet ID or worksheet does not belong to user'}), 400
+        qs_workrecord = WorkRecord.query.join(WorkSheet).filter(
+            WorkSheet.user_id == user_id,
+            WorkRecord.workDate == workDate
+        ).first()
+        if qs_workrecord:
+            return jsonify({'error': 'Workdate already have data'}), 400
+        new_workrecord = WorkRecord(
+            worksheet_id=worksheet_id,
+            workDate=workDate,
+            startTime=startTime,
+            endTime=endTime,
+            overTime=overTime,
+            lateTime=lateTime
+        )
+        db.session.add(new_workrecord)
+        db.session.commit()
+        return jsonify(WorkRecordSchema().dump(new_workrecord)), 201
+
+    def get_workrecord_fk(user_id, id):
+        workrecord = WorkRecord.query.join(WorkSheet).filter(WorkRecord.id == id, WorkSheet.user_id == user_id).first()
+        if not workrecord:
+            return jsonify({'message': 'WorkRecord not found'}), 404
+        return jsonify(WorkRecordSchema().dump(workrecord))
+
+    def update_workrecord_fk(user_id, id):
+        workrecord = WorkRecord.query.join(WorkSheet).filter(WorkRecord.id == id, WorkSheet.user_id == user_id).first()
+        if not workrecord:
+            return jsonify({'message': 'WorkRecord not found'}), 404
+
+        data = request.get_json()
+
+        workrecord.workDate = data.get('workDate', workrecord.workDate)
+        workrecord.startTime = data.get('startTime', workrecord.startTime)
+        workrecord.endTime = data.get('endTime', workrecord.endTime)
+        workrecord.overTime = data.get('overTime', workrecord.overTime)
+        workrecord.lateTime = data.get('lateTime', workrecord.lateTime)
+
+        db.session.commit()
+        return jsonify(WorkRecordSchema().dump(workrecord)), 200
+
+    def delete_workrecord_fk(user_id, id):
+        workrecord = WorkRecord.query.join(WorkSheet).filter(WorkRecord.id == id, WorkSheet.user_id == user_id).first()
+        if not workrecord:
+            return jsonify({'message': 'WorkRecord not found'}), 404
+        db.session.delete(workrecord)
+        db.session.commit()
+        return jsonify({'message': 'WorkRecord deleted successfully'}), 200
+
+
+
+    @app.route('/profile', methods=['GET','PATCH'])
+    @token_required
+    def profile(user_id):
+        if request.method == "GET":
+            return get_profile(user_id)
+        elif request.method == "PATCH":
+            return update_profile(user_id)
     def get_profile(user_id):
         try:
             profile = Profile.query.filter_by(user_id=user_id).first()
@@ -125,27 +459,60 @@ def init_app(app):
             return jsonify({'message': 'Profile not found'}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+    def update_profile(user_id):
+        try:
+            data = request.get_json()
+            profile = Profile.query.filter_by(user_id=user_id).first()
+            if profile:
+                if 'avatar_id' in data:
+                    profile.avatar_id = data['avatar_id']
+                if 'wallpaper_id' in data:
+                    profile.wallpaper_id = data['wallpaper_id']
+                if 'full_name' in data:
+                    profile.full_name = data['full_name']
+                if 'full_name' in data:
+                    profile.full_name = data['full_name']
+                if 'zalo_name' in data:
+                    profile.zalo_name = data['zalo_name']
+                if 'address' in data:
+                    profile.address = data['address']
+                if 'huyen' in data:
+                    profile.huyen = data['huyen']
+                if 'tinh' in data:
+                    profile.tinh = data['tinh']
+                if 'long_pos' in data:
+                    profile.long_pos = data['long_pos']
+                if 'lat_pos' in data:
+                    profile.lat_pos = data['lat_pos']
+                # Thêm các trường khác cần cập nhật
 
-    @app.route('/time_logs', methods=['GET'])
-    @token_required
-    def get_time_logs(user_id):
-        time_logs = TimeLog.query.filter_by(user_id=user_id).all()
-        return jsonify(TimeLogSchema(many=True).dump(time_logs))
+                db.session.commit()
+                profile = Profile.query.filter_by(user_id=user_id).first()
+                return jsonify({
+                    'message': 'Profile updated successfully',
+                    'data':ProfileSchema().dump(profile)
+                }), 200
+            return jsonify({'message': 'Profile not found'}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-    @app.route("/user/", methods=['GET'])
+    @app.route("/photos", methods=['GET'])
     @token_required
-    def get_user():
-        user_id = request.args.get('id')
-        if user_id:
-            # Thực hiện xử lý với user_id
-            user_info = {
-                "user_id": user_id,
-                "name": "John Doe",
-                "email": "john.doe@example.com"
-            }
-            return jsonify(user_info)
-        else:
-            return jsonify({"error": "ID parameter is missing"}), 400
+    def photos(user_id):
+        if request.method == "GET":
+            return get_photos(user_id)
+    def get_photos(user_id):
+        try:
+            qs_photos = Photos.query.filter_by(user_id=user_id)
+            
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 10, type=int)
+            pagination = StandardPagesPagination(qs_photos, page, per_page)
+            project_schema = WorkSheetSchema(many=True)
+            paginated_data = pagination.to_dict(project_schema)
+            return jsonify(paginated_data), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     @api.route('/secure-data', methods=['GET'])
     @token_required

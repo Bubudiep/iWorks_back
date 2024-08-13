@@ -4,9 +4,11 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from .models import db
+from flask_cors import CORS
 
 def create_app():
     app = Flask(__name__)
+    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
     app.config.from_object('app.config.Config')
     db.init_app(app)
     
