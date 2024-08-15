@@ -154,7 +154,7 @@ def init_app(app):
         }, Config.JWT_SECRET_KEY, algorithm='HS256')
         print(f"{token}")
 
-        return jsonify({'token': token,'exp': expiration_time}), 200
+        return jsonify({'token': f"{token}",'exp': expiration_time}), 200
     
     @app.route('/worksalary', methods=['GET','POST'])
     @token_required
