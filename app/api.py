@@ -1,5 +1,5 @@
-# app/api.py
-
+import random
+import string
 from flask import Blueprint, request, jsonify
 from app.models import User
 from app import db
@@ -51,6 +51,15 @@ class StandardPagesPagination:
         }
         
 def init_app(app):
+    def generate_random_password(length=12):
+        # Define the characters to use for the password
+        characters = string.ascii_letters + string.digits + string.punctuation
+        
+        # Use random.choices to pick characters from the pool
+        password = ''.join(random.choices(characters, k=length))
+        
+        return password
+
     @app.route("/")
     def index():
         return "API is running!"
@@ -102,21 +111,39 @@ def init_app(app):
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data received"}), 400
-
+        
+        zalo_id = data.get("zalo_id")
         email = data.get("email")
         password = data.get("password")
-
-        if not email or not password:
-            return jsonify({"error": "Please provide both email and password"}), 400
-
-        user = User.query.filter_by(email=email).first()
-
-        if not user:
-            return jsonify({"error": "Email not found"}), 400
-
-        # Kiểm tra mật khẩu
-        if not check_password_hash(user.password, password):
-            return jsonify({"error": "Incorrect password"}), 400
+        if zalo_id and len(zalo_id)>15:
+            profile = Profile.query.filter_by(zalo_id=zalo_id).first()
+            print(f"{profile}")
+            if profile:
+                user = profile.user  # Lấy user từ profile
+            else:
+                # create a new user
+                zalo_info = data.get("info")
+                password = generate_random_password(16)
+                hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+                user = User(username=zalo_info.get("id"),password=hashed_password)
+                db.session.add(user)
+                db.session.commit()
+                profile = Profile(user_id=user.id, 
+                                  zalo_id=zalo_id,
+                                  zalo_name=zalo_info.get("name",None),
+                                  zalo_avatar=zalo_info.get("avatar",None)
+                                )
+                db.session.add(profile)
+                db.session.commit()
+        else:
+            if not email or not password:
+                return jsonify({"error": "Please provide both email and password"}), 400
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return jsonify({"error": "Email not found"}), 400
+            # Kiểm tra mật khẩu
+            if not check_password_hash(user.password, password):
+                return jsonify({"error": "Incorrect password"}), 400
         # Tạo thời gian hết hạn cho token là 1 tuần kể từ thời điểm hiện tại
         expiration_time = datetime.utcnow() + timedelta(weeks=1)
 
