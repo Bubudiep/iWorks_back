@@ -152,7 +152,9 @@ def init_app(app):
             'user_id': user.id,
             'exp': expiration_time
         }, Config.JWT_SECRET_KEY, algorithm='HS256')
-        print(f"{token}")
+
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
 
         return jsonify({'token': f"{token}",'exp': expiration_time}), 200
     
