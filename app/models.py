@@ -24,6 +24,7 @@ class Profile(db.Model):
     wallpaper_id = db.Column(db.Integer, db.ForeignKey('photos.id'), nullable=True)
     zalo_id = db.Column(db.String(50), unique=True, nullable=False)
     zalo_name = db.Column(db.String(50), nullable=True)
+    zalo_avatar = db.Column(db.String(250), nullable=True)
     zalo_phone = db.Column(db.String(50), nullable=True)
     full_name = db.Column(db.String(50), nullable=True)
     address = db.Column(db.String(225), nullable=True)
