@@ -10,7 +10,7 @@ from .models import *
 from .schemas import *
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import request, jsonify
 from sqlalchemy import extract
 
@@ -118,7 +118,7 @@ def init_app(app):
         if not check_password_hash(user.password, password):
             return jsonify({"error": "Incorrect password"}), 400
         # Tạo thời gian hết hạn cho token là 1 tuần kể từ thời điểm hiện tại
-        expiration_time = datetime.datetime.utcnow() + datetime.timedelta(weeks=1)
+        expiration_time = datetime.utcnow() + timedelta(weeks=1)
 
         # Tạo JWT token với thời gian hết hạn
         token = jwt.encode({
