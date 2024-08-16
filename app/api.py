@@ -155,6 +155,48 @@ def login():
 
     return jsonify({'token': f"{token}",'exp': expiration_time}), 200
 
+@api.route('/createworksheet', methods=['GET','POST'])
+@token_required
+def createworksheet(user_id):
+    if request.method == "POST":
+        return create_createworksheet(user_id)
+def create_createworksheet(user_id):
+    try:
+        data = request.get_json()
+        companyName=data.get('companyName',None)
+        positionName=data.get('positionName',None)
+        startWorkdate=data.get('startWorkdate',None)
+        
+        workDays=data.get('workDays',None)
+        workFinish=data.get('workFinish',None)
+        
+        salarys=data.get('salarys',None)
+        chuyencan=data.get('chuyencan',None)
+        ngaychuyencan=data.get('ngaychuyencan',None)
+        phucap1=data.get('phucap1',None)
+        phucap2=data.get('phucap2',None)
+
+        # tạo cài đặt cho người dùng
+        new_WorkSheet = WorkSheet(
+            user_id=user_id,
+            Company=companyName,
+            WorkingDay=workDays,
+            FinishWorkingDay=workFinish,
+            isActive=True,
+            StartDate=startWorkdate
+        )
+        # new_WorkSalary = WorkSalary(
+        #     worksheet_id=worksheet,
+        #     SalaryName=SalaryName,
+        #     Salary=Salary
+        # )
+        db.session.add(new_WorkSheet)
+        db.session.commit()
+        print(f"{data}")
+        return jsonify({})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 @api.route('/worksalary', methods=['GET','POST'])
 @token_required
 def worksalary(user_id):

@@ -59,6 +59,8 @@ class WorkSheet(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     Company = db.Column(db.String(255), nullable=True)
     WorkingDay = db.Column(db.Integer, default=0)
+    FinishWorkingDay = db.Column(db.Integer, default=0)
+    StartDate = db.Column(db.DateTime, default=datetime.utcnow)
     isActive = db.Column(db.Boolean, default=True, nullable=True)
     QRCode = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -81,6 +83,8 @@ class WorkSalary(db.Model):
     worksheet_id = db.Column(db.Integer, db.ForeignKey('work_sheet.id'), nullable=False)
     SalaryName = db.Column(db.String(255), nullable=True)
     Salary = db.Column(db.Integer, default=0, nullable=True)
+    isMonthly = db.Column(db.Boolean, default=False) # Cố định hàng tháng
+    checkedDate = db.Column(db.Integer, default=0, nullable=True) # Phải đủ số ngày tính công
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
