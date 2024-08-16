@@ -58,6 +58,7 @@ class WorkSheet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     Company = db.Column(db.String(255), nullable=True)
+    JobsTitle = db.Column(db.String(255), nullable=True)
     WorkingDay = db.Column(db.Integer, default=0)
     FinishWorkingDay = db.Column(db.Integer, default=0)
     StartDate = db.Column(db.DateTime, default=datetime.utcnow)

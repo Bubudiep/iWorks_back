@@ -25,6 +25,14 @@ def generate_random_password(length=12):
     
     return password
 
+def toDate(workDate_str):
+    workDate = datetime.strptime(workDate_str, '%Y-%m-%d').date() if workDate_str else None
+    return workDate
+
+def toDatetime(workDate_str):
+    workDate = datetime.strptime(workDate_str, '%Y-%m-%d %H:%M:%S') if workDate_str else None
+    return workDate
+
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -160,21 +168,21 @@ def login():
 def createworksheet(user_id):
     if request.method == "POST":
         return create_createworksheet(user_id)
+
 def create_createworksheet(user_id):
     try:
         data = request.get_json()
-        companyName=data.get('companyName',None)
-        positionName=data.get('positionName',None)
-        startWorkdate=data.get('startWorkdate',None)
         
-        workDays=data.get('workDays',None)
-        workFinish=data.get('workFinish',None)
-        
-        salarys=data.get('salarys',None)
-        chuyencan=data.get('chuyencan',None)
-        ngaychuyencan=data.get('ngaychuyencan',None)
-        phucap1=data.get('phucap1',None)
-        phucap2=data.get('phucap2',None)
+        companyName = data.get('companyName', None)
+        positionName = data.get('positionName', None)
+        startWorkdate = data.get('startWorkdate', None)
+        workDays = data.get('workDays', None)
+        workFinish = data.get('workFinish', None)
+        salarys = data.get('salarys', None)
+        chuyencan = data.get('chuyencan', None)
+        ngaychuyencan = data.get('ngaychuyencan', None)
+        phucap1 = data.get('phucap1', None)
+        phucap2 = data.get('phucap2', None)
 
         # tạo cài đặt cho người dùng
         new_WorkSheet = WorkSheet(
@@ -183,17 +191,68 @@ def create_createworksheet(user_id):
             WorkingDay=workDays,
             FinishWorkingDay=workFinish,
             isActive=True,
-            StartDate=startWorkdate
+            StartDate=toDate(startWorkdate)  # đảm bảo hàm này đã tồn tại
         )
-        # new_WorkSalary = WorkSalary(
-        #     worksheet_id=worksheet,
-        #     SalaryName=SalaryName,
-        #     Salary=Salary
-        # )
         db.session.add(new_WorkSheet)
+        db.session.flush()  # Đảm bảo new_WorkSheet.id đã được tạo trước khi sử dụng
+
+        new_BasicSalary = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Lương cơ bản",
+            Salary=salarys
+        )
+        db.session.add(new_BasicSalary)
+
+        new_chuyencan = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Chuyên cần",
+            Salary=chuyencan,
+            isMonthly=True,
+            checkedDate=ngaychuyencan
+        )
+        db.session.add(new_chuyencan)
+
+        new_phucap1 = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Phụ cấp theo công",
+            Salary=phucap1
+        )
+        db.session.add(new_phucap1)
+
+        new_phucap2 = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Phụ cấp cố định",
+            isMonthly=True,
+            Salary=phucap2
+        )
+        db.session.add(new_phucap2)
+
         db.session.commit()
         print(f"{data}")
-        return jsonify({})
+        return jsonify(WorkSalarySchema().dump(new_WorkSheet)), 201
+    except Exception as e:
+        db.session.rollback()  # Nếu có lỗi, rollback giao dịch
+        return jsonify({"error": str(e)}), 500
+    
+@api.route('/thismonth_salary', methods=['GET','POST'])
+@token_required
+def thismonth_salary(user_id):
+    if request.method == "GET":
+        return get_worksalary(user_id)
+    elif request.method == "POST":
+        return create_worksalary(user_id)
+def get_thismonth_salary(user_id):
+    try:
+        qs_WorkSalary = WorkSalary.query.join(WorkSheet).filter(
+            WorkSheet.user_id == user_id
+        )
+        
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        pagination = StandardPagesPagination(qs_WorkSalary, page, per_page)
+        project_schema = WorkSalarySchema(many=True)
+        paginated_data = pagination.to_dict(project_schema)
+        return jsonify(paginated_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
