@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from .models import db
@@ -16,7 +16,8 @@ def create_app():
     migrate = Migrate(app, db)  # Thêm cấu hình Flask-Migrate
 
     # Đăng ký các blueprint
-    from . import api  # Import routes
-    api.init_app(app)
+    # Đăng ký các blueprint
+    from .api import api
+    app.register_blueprint(api)
 
     return app
