@@ -94,6 +94,9 @@ class WorkSalary(db.Model):
 class WorkRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     worksheet_id = db.Column(db.Integer, db.ForeignKey('work_sheet.id'), nullable=False)
+    Giobinhthuong = db.Column(db.Integer, default=0, nullable=True)
+    Giotangca = db.Column(db.Integer, default=0, nullable=True)
+    Heso = db.Column(db.Integer, default=100, nullable=True)
     workDate = db.Column(db.Date, default=datetime.utcnow)
     isWorking = db.Column(db.Boolean, default=True)
     offSpecial = db.Column(db.Boolean, default=False)
