@@ -168,7 +168,6 @@ def login():
 def createworksheet(user_id):
     if request.method == "POST":
         return create_createworksheet(user_id)
-
 def create_createworksheet(user_id):
     try:
         data = request.get_json()
@@ -232,6 +231,26 @@ def create_createworksheet(user_id):
         return jsonify(WorkSalarySchema().dump(new_WorkSheet)), 201
     except Exception as e:
         db.session.rollback()  # Nếu có lỗi, rollback giao dịch
+        return jsonify({"error": str(e)}), 500
+
+
+@api.route('/worksheet_list_details', methods=['GET'])
+@token_required
+def worksheet_list_details(user_id):
+    if request.method == "GET":
+        return get_worksheet_list_details(user_id)
+def get_worksheet_list_details(user_id):
+    try:
+        qs_WorkSheet = WorkSheet.query.filter(
+            WorkSheet.user_id == user_id
+        )
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        pagination = StandardPagesPagination(qs_WorkSheet, page, per_page)
+        project_schema = WorkSheetDetailsSchema(many=True)
+        paginated_data = pagination.to_dict(project_schema)
+        return jsonify(paginated_data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
     
 @api.route('/thismonth_salary', methods=['GET','POST'])
