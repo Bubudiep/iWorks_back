@@ -8,7 +8,12 @@ def create_app():
     app = Flask(__name__)
     
     # Cấu hình CORS với các domain được phép
-    CORS(app, resources={r"/*": {"origins": ["https://h5.zdn.vn", "zbrowser://h5.zdn.vn", "http://localhost:*", "https://localhost:*"]}})
+    CORS(app, resources={r"/*": {"origins": [
+        "https://h5.zdn.vn", 
+        "zbrowser://h5.zdn.vn", 
+        "http://localhost:*", 
+        "https://localhost:*"
+    ]}})
     
     app.config.from_object('app.config.Config')
     db.init_app(app)
