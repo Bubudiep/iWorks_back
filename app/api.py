@@ -163,6 +163,32 @@ def login():
 
     return jsonify({'token': f"{token}",'exp': expiration_time}), 200
 
+@api.route('/cham-cong-ngay', methods=['POST'])
+@token_required
+def chamCongngay(user_id):
+    if request.method == "POST":
+        return create_chamCongngay(user_id)
+def create_chamCongngay(user_id):
+    try:
+        data = request.get_json()
+        v_workDate = data.get('workDate', None)
+        get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
+        get_record=WorkRecord.query.filter_by(workDate=toDate(v_workDate)).count()
+        print(f"số ngày công: {get_record}")
+        if get_record>0:
+            return jsonify({"result":"fail"}), 403
+        new_WorkRecord=WorkRecord(
+            worksheet_id=get_WorkSheet.id,
+            Giobinhthuong=8,
+            workDate=toDate(v_workDate)
+        )
+        db.session.add(new_WorkRecord)
+        db.session.commit()
+        return jsonify({"result":"pass"}), 201
+    except Exception as e:
+        db.session.rollback()  # Nếu có lỗi, rollback giao dịch
+        return jsonify({"error": str(e)}), 500
+    
 @api.route('/createworksheet', methods=['GET','POST'])
 @token_required
 def createworksheet(user_id):
