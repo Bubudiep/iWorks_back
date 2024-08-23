@@ -543,6 +543,16 @@ def get_workrecord(user_id):
                 extract('month', WorkRecord.workDate) == month,
                 extract('year', WorkRecord.workDate) == year
             )
+
+        # Lọc theo workDate nếu có tham số
+        work_date_str = request.args.get('workDate', None)
+        if work_date_str is not None:
+            try:
+                work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
+                qs_workrecord = qs_workrecord.filter(WorkRecord.workDate == work_date)
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+        
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
         pagination = StandardPagesPagination(qs_workrecord, page, per_page)

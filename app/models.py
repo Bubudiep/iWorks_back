@@ -94,17 +94,17 @@ class WorkSalary(db.Model):
 class WorkRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     worksheet_id = db.Column(db.Integer, db.ForeignKey('work_sheet.id'), nullable=False)
-    Giobinhthuong = db.Column(db.Integer, default=0, nullable=True)
-    Giotangca = db.Column(db.Integer, default=0, nullable=True)
-    Heso = db.Column(db.Integer, default=100, nullable=True)
+    Giobinhthuong = db.Column(db.Float, default=0, nullable=True)
+    Giotangca = db.Column(db.Float, default=0, nullable=True)
+    Heso = db.Column(db.Float, default=100, nullable=True)
     workDate = db.Column(db.Date, default=datetime.utcnow)
     isWorking = db.Column(db.Boolean, default=True)
     offSpecial = db.Column(db.Boolean, default=False)
-    offRate = db.Column(db.Integer, default=0, nullable=True)
+    offRate = db.Column(db.Float, default=0, nullable=True)
     startTime = db.Column(db.DateTime, default=None, nullable=True)
     endTime = db.Column(db.DateTime, default=None, nullable=True)
-    overTime = db.Column(db.Integer, default=None, nullable=True)
-    lateTime = db.Column(db.Integer, default=None, nullable=True)
+    overTime = db.Column(db.Float, default=None, nullable=True)
+    lateTime = db.Column(db.Float, default=None, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
