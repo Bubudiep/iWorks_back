@@ -103,8 +103,8 @@ class WorkRecord(db.Model):
     offRate = db.Column(db.Float, default=0, nullable=True)
     startTime = db.Column(db.DateTime, default=None, nullable=True)
     endTime = db.Column(db.DateTime, default=None, nullable=True)
-    overTime = db.Column(db.Float, default=None, nullable=True)
-    lateTime = db.Column(db.Float, default=None, nullable=True)
+    overTime = db.Column(db.Float, default=0, nullable=True)
+    lateTime = db.Column(db.Float, default=0, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

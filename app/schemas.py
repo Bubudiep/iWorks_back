@@ -31,7 +31,7 @@ class WorkSalarySchema(Schema):
     class Meta:
         fields = ("id",
             "worksheet_id",
-            "SalaryName",
+            "SalaryName","isMonthly","checkedDate",
             "Salary","created_at","updated_at")
         
 class WorkRecordSchema(Schema):
@@ -43,10 +43,25 @@ class WorkRecordSchema(Schema):
     offRate = fields.Int(default=0, allow_none=True)
     startTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
     endTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
-    overTime = fields.Int(allow_none=True)
-    lateTime = fields.Int(allow_none=True)
+    overTime = fields.Float(default=0, allow_none=True)
+    lateTime = fields.Float(default=0, allow_none=True)
     created_at = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     updated_at = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
+
+    @post_load
+    def make_workrecord(self, data, **kwargs):
+        return WorkRecord(**data)
+       
+class WorkRecordLTESchema(Schema):
+    id = fields.Int(dump_only=True)
+    workDate = fields.Date(required=True)
+    isWorking = fields.Bool(default=True)
+    offSpecial = fields.Bool(default=False)
+    offRate = fields.Int(default=0, allow_none=True)
+    startTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
+    endTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
+    overTime = fields.Int(allow_none=True)
+    lateTime = fields.Int(allow_none=True)
 
     @post_load
     def make_workrecord(self, data, **kwargs):
@@ -84,7 +99,7 @@ class WorkSheetDetailsSchema(Schema):
     id = fields.Int()
     user_id = fields.Int()
     WorkSalary = fields.List(fields.Nested(WorkSalarySchema), dump_only=True)
-    WorkRecord = fields.List(fields.Nested(WorkRecordSchema), dump_only=True)
+    WorkRecord = fields.List(fields.Nested(WorkRecordLTESchema), dump_only=True)
     class Meta:
         fields = ("id","WorkRecord","WorkSalary",
             "user_id","Company"

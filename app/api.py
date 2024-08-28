@@ -30,8 +30,11 @@ def toDate(workDate_str):
     return workDate
 
 def toDatetime(workDate_str):
-    workDate = datetime.strptime(workDate_str, '%Y-%m-%d %H:%M:%S') if workDate_str else None
-    return workDate
+    if workDate_str:
+        workDate = datetime.strptime(workDate_str, '%Y-%m-%d %H:%M:%S') if workDate_str else None
+        return workDate
+    else:
+        return None
 
 def token_required(f):
     @wraps(f)
@@ -639,12 +642,12 @@ def update_workrecord_fk(user_id, id):
         return jsonify({'message': 'WorkRecord not found'}), 404
 
     data = request.get_json()
+    print(f"{data}")
 
-    workrecord.workDate = data.get('workDate', workrecord.workDate)
-    workrecord.startTime = data.get('startTime', workrecord.startTime)
-    workrecord.endTime = data.get('endTime', workrecord.endTime)
-    workrecord.overTime = data.get('overTime', workrecord.overTime)
-    workrecord.lateTime = data.get('lateTime', workrecord.lateTime)
+    workrecord.startTime = toDatetime(data.get('startTime', workrecord.startTime))
+    workrecord.endTime = toDatetime(data.get('endTime', workrecord.endTime))
+    workrecord.overTime = data.get('overTime', 0)
+    workrecord.lateTime = data.get('lateTime', 0)
 
     db.session.commit()
     return jsonify(WorkRecordSchema().dump(workrecord)), 200
