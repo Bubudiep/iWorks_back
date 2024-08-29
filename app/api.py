@@ -176,7 +176,8 @@ def create_chamCongngay(user_id):
         data = request.get_json()
         v_workDate = data.get('workDate', None)
         get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
-        get_record=WorkRecord.query.filter_by(workDate=toDate(v_workDate))
+        get_record=WorkRecord.query.filter_by(worksheet_id=get_WorkSheet.id
+                                              ,workDate=toDate(v_workDate))
         print(f"số ngày công: {get_record.count()}")
         if get_record.count()>0:
             get_record[0].isWorking=True
@@ -205,7 +206,8 @@ def create_nghiViecngay(user_id):
         data = request.get_json()
         v_workDate = data.get('workDate', None)
         get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
-        get_record=WorkRecord.query.filter_by(workDate=toDate(v_workDate))
+        get_record=WorkRecord.query.filter_by(worksheet_id=get_WorkSheet.id
+                                              ,workDate=toDate(v_workDate))
         if get_record.count()>0:
             get_record[0].isWorking=False
             get_record[0].Giobinhthuong=0
