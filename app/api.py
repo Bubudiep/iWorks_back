@@ -243,6 +243,10 @@ def create_createworksheet(user_id):
         ngaychuyencan = data.get('ngaychuyencan', None)
         phucap1 = data.get('phucap1', None)
         phucap2 = data.get('phucap2', None)
+        calamviec = data.get('calamviec', None)
+        ngaynghi = data.get('ngaynghi', None)
+        luongtinhtangca = data.get('luongtinhtangca', None)
+        luongkhongtinhtangca = data.get('luongkhongtinhtangca', None)
 
         # tạo cài đặt cho người dùng
         new_WorkSheet = WorkSheet(
