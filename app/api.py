@@ -245,8 +245,8 @@ def create_createworksheet(user_id):
         ngaychuyencan = data.get('ngaychuyencan', None)
         phucap1 = data.get('phucap1', None)
         phucap2 = data.get('phucap2', None)
-        calamviec = data.get('calamviec', None)
-        ngaynghi = data.get('ngaynghi', None)
+        calamviec = data.get('calamviec', "HC")
+        ngaynghi = data.get('ngaynghi', "CN")
         luongtinhtangca = data.get('luongtinhtangca', None)
         luongkhongtinhtangca = data.get('luongkhongtinhtangca', None)
 
