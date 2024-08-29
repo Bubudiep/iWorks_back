@@ -102,7 +102,7 @@ class WorkSheetDetailsSchema(Schema):
     WorkRecord = fields.List(fields.Nested(WorkRecordLTESchema), dump_only=True)
     class Meta:
         fields = ("id","WorkRecord","WorkSalary",
-            "user_id","Company"
+            "user_id","Company","NgayNghi","Calamviec","FinishWorkingDay","StartDate"
             ,"isActive","QRCode",
             "created_at","updated_at")
 

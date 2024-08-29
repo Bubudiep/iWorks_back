@@ -255,6 +255,8 @@ def create_createworksheet(user_id):
             WorkingDay=workDays,
             FinishWorkingDay=workFinish,
             isActive=True,
+            NgayNghi=ngaynghi,
+            Calamviec=calamviec,
             StartDate=toDate(startWorkdate)  # đảm bảo hàm này đã tồn tại
         )
         db.session.add(new_WorkSheet)
@@ -263,6 +265,7 @@ def create_createworksheet(user_id):
         new_BasicSalary = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Lương cơ bản",
+            isTangca=True,
             Salary=salarys
         )
         db.session.add(new_BasicSalary)
@@ -272,6 +275,7 @@ def create_createworksheet(user_id):
             SalaryName="Chuyên cần",
             Salary=chuyencan,
             isMonthly=True,
+            isTangca=True,
             checkedDate=ngaychuyencan
         )
         db.session.add(new_chuyencan)
@@ -279,6 +283,7 @@ def create_createworksheet(user_id):
         new_phucap1 = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Phụ cấp theo công",
+            isTangca=True,
             Salary=phucap1
         )
         db.session.add(new_phucap1)
@@ -286,10 +291,27 @@ def create_createworksheet(user_id):
         new_phucap2 = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Phụ cấp cố định",
+            isTangca=True,
             isMonthly=True,
             Salary=phucap2
         )
         db.session.add(new_phucap2)
+        new_luongtinhtangca = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Lương tính tăng ca",
+            isTangca=True,
+            isMonthly=True,
+            Salary=luongtinhtangca
+        )
+        db.session.add(new_luongtinhtangca)
+        new_luongkotinhtangca = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Lương không tính tăng ca",
+            isTangca=False,
+            isMonthly=True,
+            Salary=luongtinhtangca
+        )
+        db.session.add(new_luongkotinhtangca)
 
         db.session.commit()
         print(f"{data}")

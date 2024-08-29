@@ -100,6 +100,7 @@ class WorkSalary(db.Model):
     SalaryName = db.Column(db.String(255), nullable=True)
     Salary = db.Column(db.Integer, default=0, nullable=True)
     isMonthly = db.Column(db.Boolean, default=False) # Cố định hàng tháng
+    isTangca = db.Column(db.Boolean, default=True) # Tính vào tăng ca
     checkedDate = db.Column(db.Integer, default=0, nullable=True) # Phải đủ số ngày tính công
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
