@@ -143,6 +143,20 @@ def login():
                             )
             db.session.add(profile)
             db.session.commit()
+            db.session.flush()
+            # tạo cài đặt cho người dùng
+            get_WorkSheet = WorkSheet(
+                user_id=user.id,
+                Company=None,
+                WorkingDay=26,
+                FinishWorkingDay=None,
+                isActive=True,
+                NgayNghi="CN",
+                Calamviec="2Ca",
+                StartDate=datetime.now()  # đảm bảo hàm này đã tồn tại
+            )
+            db.session.add(get_WorkSheet)
+            db.session.commit()
     else:
         if not email or not password:
             return jsonify({"error": "Please provide both email and password"}), 400
@@ -185,7 +199,7 @@ def create_chamCongngay(user_id):
                 FinishWorkingDay=None,
                 isActive=True,
                 NgayNghi="CN",
-                Calamviec="2CA",
+                Calamviec="2Ca",
                 StartDate=datetime.now()  # đảm bảo hàm này đã tồn tại
             )
             db.session.add(get_WorkSheet)
