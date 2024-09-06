@@ -176,6 +176,20 @@ def create_chamCongngay(user_id):
         data = request.get_json()
         v_workDate = data.get('workDate', None)
         get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
+        if get_WorkSheet is None:
+            # tạo cài đặt cho người dùng
+            get_WorkSheet = WorkSheet(
+                user_id=user_id,
+                Company=None,
+                WorkingDay=26,
+                FinishWorkingDay=None,
+                isActive=True,
+                NgayNghi="CN",
+                Calamviec="2CA",
+                StartDate=toDate(datetime.now())  # đảm bảo hàm này đã tồn tại
+            )
+            db.session.add(get_WorkSheet)
+            db.session.flush()  # Đảm bảo get_WorkSheet.id đã được tạo trước khi sử dụng
         get_record=WorkRecord.query.filter_by(worksheet_id=get_WorkSheet.id
                                               ,workDate=toDate(v_workDate))
         print(f"số ngày công: {get_record.count()}")
