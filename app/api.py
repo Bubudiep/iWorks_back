@@ -186,7 +186,7 @@ def create_chamCongngay(user_id):
                 isActive=True,
                 NgayNghi="CN",
                 Calamviec="2CA",
-                StartDate=toDate(datetime.now())  # đảm bảo hàm này đã tồn tại
+                StartDate=datetime.now()  # đảm bảo hàm này đã tồn tại
             )
             db.session.add(get_WorkSheet)
             db.session.flush()  # Đảm bảo get_WorkSheet.id đã được tạo trước khi sử dụng
