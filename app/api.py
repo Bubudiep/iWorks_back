@@ -12,7 +12,7 @@ import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 from flask import request, jsonify
-from sqlalchemy import extract
+from sqlalchemy import extract, and_
 
 api = Blueprint('api', __name__, url_prefix='/api')
     
@@ -606,6 +606,18 @@ def get_workrecord(user_id):
                 extract('month', WorkRecord.workDate) == month,
                 extract('year', WorkRecord.workDate) == year
             )
+        range_date_str = request.args.get('range_date', None)
+        if range_date_str is not None:
+            try:
+                start_date_str, end_date_str = range_date_str.split('_')
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+                qs_workrecord = qs_workrecord.filter(
+                    and_(WorkRecord.workDate >= start_date, WorkRecord.workDate <= end_date)
+                )
+            except ValueError:
+                return jsonify({"error": "Invalid range_date format. Use YYYY-MM-DD_YYYY-MM-DD."}), 400
 
         # Lọc theo workDate nếu có tham số
         work_date_str = request.args.get('workDate', None)
