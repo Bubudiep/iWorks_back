@@ -30,8 +30,11 @@ def toDate(workDate_str):
     return workDate
 
 def toDatetime(workDate_str):
-    workDate = datetime.strptime(workDate_str, '%Y-%m-%d %H:%M:%S') if workDate_str else None
-    return workDate
+    if workDate_str:
+        workDate = datetime.strptime(workDate_str, '%Y-%m-%d %H:%M:%S') if workDate_str else None
+        return workDate
+    else:
+        return None
 
 def token_required(f):
     @wraps(f)
@@ -173,13 +176,47 @@ def create_chamCongngay(user_id):
         data = request.get_json()
         v_workDate = data.get('workDate', None)
         get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
-        get_record=WorkRecord.query.filter_by(workDate=toDate(v_workDate)).count()
-        print(f"số ngày công: {get_record}")
-        if get_record>0:
-            return jsonify({"result":"fail"}), 403
+        get_record=WorkRecord.query.filter_by(worksheet_id=get_WorkSheet.id
+                                              ,workDate=toDate(v_workDate))
+        print(f"số ngày công: {get_record.count()}")
+        if get_record.count()>0:
+            get_record[0].isWorking=True
+            get_record[0].Giobinhthuong=8
+            db.session.commit()
+            return jsonify({"result":"pass"}), 201
         new_WorkRecord=WorkRecord(
             worksheet_id=get_WorkSheet.id,
             Giobinhthuong=8,
+            workDate=toDate(v_workDate)
+        )
+        db.session.add(new_WorkRecord)
+        db.session.commit()
+        return jsonify({"result":"pass"}), 201
+    except Exception as e:
+        db.session.rollback()  # Nếu có lỗi, rollback giao dịch
+        return jsonify({"error": str(e)}), 500
+    
+@api.route('/nghi-viec-ngay', methods=['POST'])
+@token_required
+def nghiViecngay(user_id):
+    if request.method == "POST":
+        return create_nghiViecngay(user_id)
+def create_nghiViecngay(user_id):
+    try:
+        data = request.get_json()
+        v_workDate = data.get('workDate', None)
+        get_WorkSheet=WorkSheet.query.filter_by(user_id=user_id).first()
+        get_record=WorkRecord.query.filter_by(worksheet_id=get_WorkSheet.id
+                                              ,workDate=toDate(v_workDate))
+        if get_record.count()>0:
+            get_record[0].isWorking=False
+            get_record[0].Giobinhthuong=0
+            db.session.commit()
+            return jsonify({"result":"pass"}), 201
+        new_WorkRecord=WorkRecord(
+            worksheet_id=get_WorkSheet.id,
+            Giobinhthuong=0,
+            isWorking=False,
             workDate=toDate(v_workDate)
         )
         db.session.add(new_WorkRecord)
@@ -208,6 +245,10 @@ def create_createworksheet(user_id):
         ngaychuyencan = data.get('ngaychuyencan', None)
         phucap1 = data.get('phucap1', None)
         phucap2 = data.get('phucap2', None)
+        calamviec = data.get('calamviec', "HC")
+        ngaynghi = data.get('ngaynghi', "CN")
+        luongtinhtangca = data.get('luongtinhtangca', None)
+        luongkhongtinhtangca = data.get('luongkhongtinhtangca', None)
 
         # tạo cài đặt cho người dùng
         new_WorkSheet = WorkSheet(
@@ -216,6 +257,8 @@ def create_createworksheet(user_id):
             WorkingDay=workDays,
             FinishWorkingDay=workFinish,
             isActive=True,
+            NgayNghi=ngaynghi,
+            Calamviec=calamviec,
             StartDate=toDate(startWorkdate)  # đảm bảo hàm này đã tồn tại
         )
         db.session.add(new_WorkSheet)
@@ -224,6 +267,7 @@ def create_createworksheet(user_id):
         new_BasicSalary = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Lương cơ bản",
+            isTangca=True,
             Salary=salarys
         )
         db.session.add(new_BasicSalary)
@@ -233,6 +277,7 @@ def create_createworksheet(user_id):
             SalaryName="Chuyên cần",
             Salary=chuyencan,
             isMonthly=True,
+            isTangca=True,
             checkedDate=ngaychuyencan
         )
         db.session.add(new_chuyencan)
@@ -240,6 +285,7 @@ def create_createworksheet(user_id):
         new_phucap1 = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Phụ cấp theo công",
+            isTangca=True,
             Salary=phucap1
         )
         db.session.add(new_phucap1)
@@ -247,10 +293,27 @@ def create_createworksheet(user_id):
         new_phucap2 = WorkSalary(
             worksheet_id=new_WorkSheet.id,
             SalaryName="Phụ cấp cố định",
+            isTangca=True,
             isMonthly=True,
             Salary=phucap2
         )
         db.session.add(new_phucap2)
+        new_luongtinhtangca = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Lương tính tăng ca",
+            isTangca=True,
+            isMonthly=True,
+            Salary=luongtinhtangca
+        )
+        db.session.add(new_luongtinhtangca)
+        new_luongkotinhtangca = WorkSalary(
+            worksheet_id=new_WorkSheet.id,
+            SalaryName="Lương không tính tăng ca",
+            isTangca=False,
+            isMonthly=True,
+            Salary=luongtinhtangca
+        )
+        db.session.add(new_luongkotinhtangca)
 
         db.session.commit()
         print(f"{data}")
@@ -607,12 +670,12 @@ def update_workrecord_fk(user_id, id):
         return jsonify({'message': 'WorkRecord not found'}), 404
 
     data = request.get_json()
+    print(f"{data}")
 
-    workrecord.workDate = data.get('workDate', workrecord.workDate)
-    workrecord.startTime = data.get('startTime', workrecord.startTime)
-    workrecord.endTime = data.get('endTime', workrecord.endTime)
-    workrecord.overTime = data.get('overTime', workrecord.overTime)
-    workrecord.lateTime = data.get('lateTime', workrecord.lateTime)
+    workrecord.startTime = toDatetime(data.get('startTime', workrecord.startTime))
+    workrecord.endTime = toDatetime(data.get('endTime', workrecord.endTime))
+    workrecord.overTime = data.get('overTime', 0)
+    workrecord.lateTime = data.get('lateTime', 0)
 
     db.session.commit()
     return jsonify(WorkRecordSchema().dump(workrecord)), 200

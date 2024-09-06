@@ -2,6 +2,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from sqlalchemy import ForeignKeyConstraint
+from sqlalchemy.orm import validates
 
 db = SQLAlchemy()
 
@@ -60,6 +61,8 @@ class WorkSheet(db.Model):
     Company = db.Column(db.String(255), nullable=True)
     JobsTitle = db.Column(db.String(255), nullable=True)
     WorkingDay = db.Column(db.Integer, default=0)
+    NgayNghi = db.Column(db.String(255), nullable=True)
+    Calamviec = db.Column(db.String(255), nullable=True)
     FinishWorkingDay = db.Column(db.Integer, default=0)
     StartDate = db.Column(db.DateTime, default=datetime.utcnow)
     isActive = db.Column(db.Boolean, default=True, nullable=True)
@@ -78,6 +81,18 @@ class WorkSheet(db.Model):
         backref=db.backref("work_sheet", lazy=True), 
         cascade="all, delete-orphan"
     )
+    @validates('NgayNghi')
+    def validate_NgayNghi(self, key, value):
+        allowed_values = ['CN', 'T7CN']
+        if value not in allowed_values:
+            raise ValueError(f"Invalid value for NgayNghi: {value}. Allowed values are: {allowed_values}")
+        return value
+    @validates('Calamviec')
+    def validate_calamviec(self, key, value):
+        allowed_values = ['HC', '2Ca', '3Ca']
+        if value not in allowed_values:
+            raise ValueError(f"Invalid value for Calamviec: {value}. Allowed values are: {allowed_values}")
+        return value
 
 class WorkSalary(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,6 +100,7 @@ class WorkSalary(db.Model):
     SalaryName = db.Column(db.String(255), nullable=True)
     Salary = db.Column(db.Integer, default=0, nullable=True)
     isMonthly = db.Column(db.Boolean, default=False) # Cố định hàng tháng
+    isTangca = db.Column(db.Boolean, default=True) # Tính vào tăng ca
     checkedDate = db.Column(db.Integer, default=0, nullable=True) # Phải đủ số ngày tính công
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
@@ -103,8 +119,8 @@ class WorkRecord(db.Model):
     offRate = db.Column(db.Float, default=0, nullable=True)
     startTime = db.Column(db.DateTime, default=None, nullable=True)
     endTime = db.Column(db.DateTime, default=None, nullable=True)
-    overTime = db.Column(db.Float, default=None, nullable=True)
-    lateTime = db.Column(db.Float, default=None, nullable=True)
+    overTime = db.Column(db.Float, default=0, nullable=True)
+    lateTime = db.Column(db.Float, default=0, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
