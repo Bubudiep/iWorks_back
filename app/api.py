@@ -210,11 +210,15 @@ def create_chamCongngay(user_id):
         if get_record.count()>0:
             get_record[0].isWorking=True
             get_record[0].Giobinhthuong=8
+            get_record[0].startTime=toDatetime(v_workDate+" 08:00:00")
+            get_record[0].endTime=toDatetime(v_workDate+" 17:00:00")
             db.session.commit()
             return jsonify({"result":"pass"}), 201
         new_WorkRecord=WorkRecord(
             worksheet_id=get_WorkSheet.id,
             Giobinhthuong=8,
+            startTime=toDatetime(v_workDate+" 08:00:00"),
+            endTime=toDatetime(v_workDate+" 17:00:00"),
             workDate=toDate(v_workDate)
         )
         db.session.add(new_WorkRecord)
@@ -239,11 +243,15 @@ def create_nghiViecngay(user_id):
         if get_record.count()>0:
             get_record[0].isWorking=False
             get_record[0].Giobinhthuong=0
+            get_record[0].overTime=0
+            get_record[0].lateTime=0
+            get_record[0].startTime=None
+            get_record[0].endTime=None
             db.session.commit()
             return jsonify({"result":"pass"}), 201
         new_WorkRecord=WorkRecord(
             worksheet_id=get_WorkSheet.id,
-            Giobinhthuong=0,
+            Giobinhthuong=0,overTime=0,lateTime=0,startTime=None,endTime=None,
             isWorking=False,
             workDate=toDate(v_workDate)
         )
@@ -711,9 +719,16 @@ def update_workrecord_fk(user_id, id):
 
     data = request.get_json()
     print(f"{data}")
-
-    workrecord.startTime = toDatetime(data.get('startTime', workrecord.startTime))
-    workrecord.endTime = toDatetime(data.get('endTime', workrecord.endTime))
+    if data.get('leaveType',None) is not None:
+        workrecord.leaveType = data.get('leaveType')
+    if data.get('offRate',None) is not None:
+        workrecord.offRate = data.get('offRate')
+    if data.get('bonusSalary',None) is not None:
+        workrecord.bonusSalary = data.get('bonusSalary')
+    if data.get('startTime',None) is not None:
+        workrecord.startTime = toDatetime(data.get('startTime'))
+    if data.get('endTime',None) is not None:
+        workrecord.endTime = toDatetime(data.get('endTime'))
     workrecord.overTime = data.get('overTime', 0)
     workrecord.lateTime = data.get('lateTime', 0)
 

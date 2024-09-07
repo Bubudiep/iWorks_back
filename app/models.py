@@ -108,7 +108,13 @@ class WorkSalary(db.Model):
     )
     
 class WorkRecord(db.Model):
+    #   0 Không phép
+    #   1 Có phép
+    #   2 Hưởng lương
+    #   3 Nghỉ ốm
     id = db.Column(db.Integer, primary_key=True)
+    leaveType = db.Column(db.Integer, nullable=True)
+    bonusSalary = db.Column(db.Integer, nullable=True)
     worksheet_id = db.Column(db.Integer, db.ForeignKey('work_sheet.id'), nullable=False)
     Giobinhthuong = db.Column(db.Float, default=0, nullable=True)
     Giotangca = db.Column(db.Float, default=0, nullable=True)

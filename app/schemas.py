@@ -45,6 +45,8 @@ class WorkRecordSchema(Schema):
     endTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
     overTime = fields.Float(default=0, allow_none=True)
     lateTime = fields.Float(default=0, allow_none=True)
+    leaveType = fields.Int(allow_none=True)
+    bonusSalary = fields.Int(allow_none=True)
     created_at = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     updated_at = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
 
@@ -62,6 +64,8 @@ class WorkRecordLTESchema(Schema):
     endTime = fields.DateTime(format='%Y-%m-%d %H:%M:%S', allow_none=True)
     overTime = fields.Int(allow_none=True)
     lateTime = fields.Int(allow_none=True)
+    leaveType = fields.Int(allow_none=True)
+    bonusSalary = fields.Int(allow_none=True)
 
     @post_load
     def make_workrecord(self, data, **kwargs):
