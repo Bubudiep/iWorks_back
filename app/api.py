@@ -285,18 +285,32 @@ def create_createworksheet(user_id):
         ngaynghi = data.get('ngaynghi', "CN")
         luongtinhtangca = data.get('luongtinhtangca', None)
         luongkhongtinhtangca = data.get('luongkhongtinhtangca', None)
-
-        # tạo cài đặt cho người dùng
-        new_WorkSheet = WorkSheet(
-            user_id=user_id,
-            Company=companyName,
-            WorkingDay=workDays,
-            FinishWorkingDay=workFinish,
-            isActive=True,
-            NgayNghi=ngaynghi,
-            Calamviec=calamviec,
-            StartDate=toDate(startWorkdate)  # đảm bảo hàm này đã tồn tại
-        )
+        new_WorkSheet=WorkSheet.query.filter(WorkSheet.user_id == user_id).first()
+        if new_WorkSheet:
+            new_WorkSheet.Company=companyName
+            new_WorkSheet.WorkingDay=workDays
+            new_WorkSheet.FinishWorkingDay=workFinish
+            new_WorkSheet.isActive=True
+            new_WorkSheet.NgayNghi=ngaynghi
+            new_WorkSheet.Calamviec=calamviec
+            new_WorkSheet.StartDate=toDate(startWorkdate)
+            new_WorkSheet.updated_at=datetime.now()
+            qs_WorkSalary=WorkSalary.query.filter(WorkSalary.worksheet_id==new_WorkSheet.id)
+            for ws in qs_WorkSalary:
+                db.session.delete(ws)
+            db.session.commit()
+        else:
+            # tạo cài đặt cho người dùng
+            new_WorkSheet = WorkSheet(
+                user_id=user_id,
+                Company=companyName,
+                WorkingDay=workDays,
+                FinishWorkingDay=workFinish,
+                isActive=True,
+                NgayNghi=ngaynghi,
+                Calamviec=calamviec,
+                StartDate=toDate(startWorkdate)  # đảm bảo hàm này đã tồn tại
+            )
         db.session.add(new_WorkSheet)
         db.session.flush()  # Đảm bảo new_WorkSheet.id đã được tạo trước khi sử dụng
 
@@ -352,8 +366,7 @@ def create_createworksheet(user_id):
         db.session.add(new_luongkotinhtangca)
 
         db.session.commit()
-        print(f"{data}")
-        return jsonify(WorkSalarySchema().dump(new_WorkSheet)), 201
+        return jsonify(WorkSheetDetailsSchema().dump(new_WorkSheet)), 201
     except Exception as e:
         db.session.rollback()  # Nếu có lỗi, rollback giao dịch
         return jsonify({"error": str(e)}), 500
