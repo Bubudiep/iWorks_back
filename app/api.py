@@ -121,7 +121,7 @@ def login():
         return jsonify({"error": "No JSON data received"}), 400
     
     zalo_id = data.get("zalo_id")
-    email = data.get("email")
+    username = data.get("username")
     password = data.get("password")
     if zalo_id and len(zalo_id)>15:
         profile = Profile.query.filter_by(zalo_id=zalo_id).first()
@@ -158,11 +158,11 @@ def login():
             db.session.add(get_WorkSheet)
             db.session.commit()
     else:
-        if not email or not password:
-            return jsonify({"error": "Please provide both email and password"}), 400
-        user = User.query.filter_by(email=email).first()
+        if not username or not password:
+            return jsonify({"error": "Please provide both username and password"}), 400
+        user = User.query.filter_by(username=username).first()
         if not user:
-            return jsonify({"error": "Email not found"}), 400
+            return jsonify({"error": "User not found"}), 400
         # Kiểm tra mật khẩu
         if not check_password_hash(user.password, password):
             return jsonify({"error": "Incorrect password"}), 400

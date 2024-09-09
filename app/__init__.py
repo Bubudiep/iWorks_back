@@ -11,6 +11,7 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": [
         "https://h5.zdn.vn", 
         "zbrowser://h5.zdn.vn", 
+        "http://localhost:6500",
         "http://localhost:*", 
         "https://localhost:*"
     ]}})
